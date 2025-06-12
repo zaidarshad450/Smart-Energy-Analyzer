@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enhanced Smart Energy Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="header">
+    <button id="toggle-sidebar-btn">←</button>
+    <h1>Smart Energy Analyzer</h1>
+  </div>
+
+  <div class="dashboard">
+    <div class="sidebar">
+      <h2>Phases</h2>
+      <button onclick="loadPhase('phase 1')">Phase 1</button>
+      <button onclick="loadPhase('phase 2')">Phase 2</button>
+      <button onclick="loadPhase('phase 3')">Phase 3</button>
+      <button id="set-point-btn">Set Point</button>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+      <button id="dark-mode-toggle" class="dark-mode-btn">
+        <i class="fas fa-moon"></i> Dark Mode
+      </button>
+    </div>
+    <div class="content">
+      <h1 id="phase-title">Phase 1</h1>
+      <div class="cards" id="realtime-values"></div>
+      <div class="charts" id="charts-container"></div>
+    </div>
+  </div>
+
+  <!-- Set-Point Modal -->
+  <div id="set-point-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2>Set Point Configuration</h2>
+      <div class="modal-body">
+        <label for="param-select">Select Parameter:</label>
+        <select id="param-select">
+          <option value="field1">Voltage (V)</option>
+          <option value="field2">Current (A)</option>
+          <option value="field3">Real Power (W)</option>
+          <option value="field4">Apparent Power (VA)</option>
+          <option value="field5">Reactive Power (VAR)</option>
+          <option value="field6">Power Factor</option>
+          <option value="field7">Frequency (Hz)</option>
+          <option value="field8">Energy (kWh)</option>
+        </select>
+
+        <div class="setpoint-chart-container">
+          <canvas id="setpoint-chart"></canvas>
+        </div>
+
+        <div class="setpoint-inputs">
+          <label>
+            Min:
+            <input type="number" id="min-input" step="any" placeholder="e.g. 220" />
+          </label>
+          <label>
+            Max:
+            <input type="number" id="max-input" step="any" placeholder="e.g. 240" />
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="save-setpoints-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
