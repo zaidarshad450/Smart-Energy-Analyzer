@@ -4,28 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Enhanced Smart Energy Dashboard</title>
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Your CSS -->
   <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js for charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jsPDF UMD must be loaded before script.js if you use it there -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <button id="toggle-sidebar-btn">←</button>
     <h1>Smart Energy Analyzer</h1>
   </div>
 
+  <!-- Dashboard -->
   <div class="dashboard">
     <div class="sidebar">
       <h2>Phases</h2>
-      <button onclick="loadPhase('phase 1')">Phase 1</button>
-      <button onclick="loadPhase('phase 2')">Phase 2</button>
-      <button onclick="loadPhase('phase 3')">Phase 3</button>
+      <button onclick="loadPhase('phase1')">Phase 1</button>
+      <button onclick="loadPhase('phase2')">Phase 2</button>
+      <button onclick="loadPhase('phase3')">Phase 3</button>
       <button id="set-point-btn">Set Point</button>
+      <button id="kwh-history-btn">KWh History</button>
       <button onclick="logout()" class="logout-btn">Logout</button>
       <button id="dark-mode-toggle" class="dark-mode-btn">
         <i class="fas fa-moon"></i> Dark Mode
       </button>
     </div>
+
     <div class="content">
       <h1 id="phase-title">Phase 1</h1>
       <div class="cards" id="realtime-values"></div>
@@ -33,10 +42,39 @@
     </div>
   </div>
 
+  <!-- KWh History Modal -->
+  <div id="kwh-history-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" id="close-kwh-modal">&times;</span>
+      <h2>KWh History</h2>
+      <div class="modal-body">
+        <label for="history-range">Select Range:</label>
+        <select id="history-range">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="custom">Custom</option>
+        </select>
+        <div id="custom-date-range" style="display: none;">
+          <label for="start-date">Start Date:</label>
+          <input type="date" id="start-date">
+          <label for="end-date">End Date:</label>
+          <input type="date" id="end-date">
+        </div>
+        <div class="kwh-history-chart-container">
+          <canvas id="kwh-history-chart"></canvas>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="download-report-btn">Download Report</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Set-Point Modal -->
   <div id="set-point-modal" class="modal">
     <div class="modal-content">
-      <span class="close-modal">&times;</span>
+      <span class="close-modal" id="close-setpoint-modal">&times;</span>
       <h2>Set Point Configuration</h2>
       <div class="modal-body">
         <label for="param-select">Select Parameter:</label>
@@ -73,6 +111,7 @@
     </div>
   </div>
 
+  <!-- Your main script (script.js) -->
   <script src="script.js"></script>
 </body>
 </html>

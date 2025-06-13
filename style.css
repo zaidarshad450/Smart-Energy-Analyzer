@@ -14,7 +14,8 @@
   --card-normal: #429f45;
   --card-low: #efe478;
   --card-high: #cd372a;
-  --card-hover-scale: 1.05;
+  /* Hover scale: adjust as desired (1.02 for small grow, 1.1 for more) */
+  --card-hover-scale: 1.18;
 }
 
 body.dark-mode {
@@ -124,12 +125,12 @@ body {
   background: var(--sidebar-btn-bg);
   border: none;
   color: var(--sidebar-text-color);
-  padding: 10px 20px;
+  padding: 10px 16px;
   margin: 5px;
   cursor: pointer;
   border-radius: 4px;
   width: 100%;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   transition: all 0.3s ease;
   position: relative;
@@ -140,7 +141,7 @@ body {
 .sidebar button:hover {
   background: var(--sidebar-btn-hover);
   color: var(--sidebar-text-hover-color);
-  transform: translateX(5px);
+  transform: translateX(0.0px);
 }
 
 .sidebar button:hover::after {
@@ -170,17 +171,18 @@ body {
   transition: background-color 0.3s ease;
 }
 
+/* Adjusted card grid: smaller min width and gap */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 15px;
   margin-bottom: 30px;
 }
 
 .card {
   background: var(--card-bg);
   border-radius: 8px;
-  padding: 20px;
+  padding: 15px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   text-align: center;
   color: var(--text-color);
@@ -198,14 +200,9 @@ body {
   z-index: 10;
 }
 
-.card.voltage:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 20px rgba(67, 97, 238, 0.5);
-}
-
 .card h3 {
-  margin: 0 0 10px;
-  font-size: 1.1rem;
+  margin: 0 0 8px;
+  font-size: 1rem;
   color: #666;
   transition: color 0.3s ease;
 }
@@ -216,14 +213,14 @@ body {
 
 .card p {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: bold;
   color: var(--text-color);
   transition: font-size 0.3s ease;
 }
 
 .card:hover p {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
 }
 
 /* Charts grid */
@@ -327,10 +324,10 @@ body {
 .dark-mode-btn:hover {
   background: var(--sidebar-btn-hover);
   color: #fff;
-  transform: translateX(5px);
+  transform: translateX(2px);
 }
 
-/* Modal for Set-Point */
+/* Modal for Set-Point and KWh History */
 .modal {
   display: none;
   position: fixed;
@@ -385,7 +382,7 @@ body {
 /* Chart container in modal */
 .setpoint-chart-container {
   position: relative;
-  height: 300px;
+  height: 250px;
   margin-bottom: 15px;
 }
 
@@ -468,4 +465,3 @@ body {
   70% { box-shadow: 0 0 0 10px rgba(67, 97, 238, 0); }
   100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
 }
-

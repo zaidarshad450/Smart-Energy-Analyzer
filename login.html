@@ -2,20 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login - Smart Energy Analyzer</title>
-  <link rel="stylesheet" href="style.css" />
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
-    /* Login page specific styles */
+    :root {
+      --bg-color: #f5f7fa;
+      --text-color: #333;
+      --sidebar-btn-bg: #e0e0e0;
+      --sidebar-btn-hover: #00b894;
+    }
+
+    body.dark-mode {
+      --bg-color: #121212;
+      --text-color: #f5f5f5;
+      --sidebar-btn-bg: #333;
+      --sidebar-btn-hover: #00b894;
+    }
+
+    /* Layout for auth pages */
     body.auth-page {
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      background: var(--bg-color);
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff;
+      color: var(--text-color);
+      position: relative;
     }
 
     .auth-container {
@@ -33,6 +49,7 @@
       font-weight: 700;
       font-size: 2rem;
       letter-spacing: 1.2px;
+      color: var(--text-color);
     }
 
     form#login-form {
@@ -50,23 +67,22 @@
       outline: none;
       transition: background-color 0.3s, box-shadow 0.3s;
       background: rgba(255, 255, 255, 0.15);
-      color: #fff;
+      color: var(--text-color);
       box-shadow: inset 1px 1px 4px rgba(0,0,0,0.3);
     }
 
     form#login-form input::placeholder {
-      color: #ddd;
+      color: #a39999;
     }
 
-    form#login-form input[type="text"]:focus,
-    form#login-form input[type="password"]:focus {
+    form#login-form input:focus {
       background: rgba(255, 255, 255, 0.3);
-      box-shadow: 0 0 8px 2px #00b894;
-      color: #fff;
+      box-shadow: 0 0 8px 2px #17c3b2;
+      color: var(--text-color);
     }
 
     form#login-form button {
-      background: #00b894;
+      background: var(--sidebar-btn-hover);
       border: none;
       color: white;
       padding: 14px 0;
@@ -74,7 +90,7 @@
       font-weight: 700;
       font-size: 1.1rem;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, box-shadow 0.3s;
       box-shadow: 0 4px 12px rgba(0,184,148,0.5);
     }
 
@@ -86,11 +102,11 @@
     .auth-container p {
       margin-top: 20px;
       font-size: 0.9rem;
-      color: #e0e0e0;
+      color: var(--text-color);
     }
 
     .auth-container p a {
-      color: #00b894;
+      color: #17c3b2;
       text-decoration: none;
       font-weight: 600;
       transition: color 0.3s;
@@ -99,6 +115,29 @@
     .auth-container p a:hover {
       color: #01976d;
       text-decoration: underline;
+    }
+
+    .dark-mode-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: var(--sidebar-btn-bg);
+      border: none;
+      color: var(--text-color);
+      padding: 10px 15px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .dark-mode-btn:hover {
+      background: var(--sidebar-btn-hover);
+      color: #fff;
     }
 
     @media (max-width: 400px) {
@@ -110,8 +149,13 @@
   </style>
 </head>
 <body class="auth-page">
+  <!-- Dark mode toggle -->
+  <button id="dark-mode-toggle" class="dark-mode-btn">
+    <i class="fas fa-moon"></i> Dark Mode
+  </button>
+
   <div class="auth-container">
-    <h2>Login</h2>
+    <h2>Welcome Back</h2>
     <form id="login-form">
       <input type="text" id="login-username" placeholder="Username" required />
       <input type="password" id="login-password" placeholder="Password" required />
@@ -119,6 +163,52 @@
     </form>
     <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
   </div>
-  <script src="auth.js"></script>
+
+  <script>
+    // Redirect logged-in users away from login page:
+    (function() {
+      const path = location.pathname.split("/").pop();
+      if (localStorage.getItem("currentUser") && path === "login.html") {
+        window.location.href = "index.html";
+      }
+    })();
+
+    // Dark mode toggle
+    document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const btn = document.getElementById('dark-mode-toggle');
+      const icon = btn.querySelector('i');
+      if (document.body.classList.contains('dark-mode')) {
+        icon.className = 'fas fa-sun';
+        btn.innerHTML = `<i class="fas fa-sun"></i> Light Mode`;
+      } else {
+        icon.className = 'fas fa-moon';
+        btn.innerHTML = `<i class="fas fa-moon"></i> Dark Mode`;
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const loginForm = document.getElementById("login-form");
+      if (loginForm) {
+        loginForm.addEventListener("submit", e => {
+          e.preventDefault();
+          const username = document.getElementById("login-username").value.trim();
+          const password = document.getElementById("login-password").value.trim();
+
+          if (!username || !password) {
+            alert("Please enter both username and password.");
+            return;
+          }
+          const storedPassword = localStorage.getItem(`user_${username}`);
+          if (storedPassword === password) {
+            localStorage.setItem("currentUser", username);
+            window.location.href = "index.html";
+          } else {
+            alert("Invalid username or password");
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>

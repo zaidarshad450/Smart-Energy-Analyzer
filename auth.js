@@ -42,42 +42,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Change Password Logic
-  const changePasswordBtn = document.getElementById("change-password-btn");
-  if (changePasswordBtn) {
-    changePasswordBtn.addEventListener("click", () => {
-      const currentUser = localStorage.getItem("currentUser");
-      if (!currentUser) {
-        alert("Please log in first.");
-        window.location.href = "login.html";
-        return;
+  // Dark mode toggle for auth pages
+  const darkModeToggle = document.getElementById("dark-mode-toggle");
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      const icon = darkModeToggle.querySelector("i");
+      if (document.body.classList.contains("dark-mode")) {
+        icon.className = "fas fa-sun";
+        darkModeToggle.innerHTML = `<i class="fas fa-sun"></i> Light Mode`;
+      } else {
+        icon.className = "fas fa-moon";
+        darkModeToggle.innerHTML = `<i class="fas fa-moon"></i> Dark Mode`;
       }
-
-      const oldPass = prompt("Enter your current password:");
-      if (oldPass === null) return; // Cancelled prompt
-
-      const storedPass = localStorage.getItem(`user_${currentUser}`);
-      if (oldPass !== storedPass) {
-        alert("Incorrect current password.");
-        return;
-      }
-
-      const newPass = prompt("Enter your new password:");
-      if (newPass === null || newPass.trim() === "") {
-        alert("New password cannot be empty.");
-        return;
-      }
-
-      const confirmPass = prompt("Confirm your new password:");
-      if (confirmPass === null) return;
-
-      if (newPass !== confirmPass) {
-        alert("Passwords do not match.");
-        return;
-      }
-
-      localStorage.setItem(`user_${currentUser}`, newPass);
-      alert("Password changed successfully!");
     });
   }
 });

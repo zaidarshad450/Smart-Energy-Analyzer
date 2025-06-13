@@ -1,3 +1,9 @@
+// Redirect unauthenticated users to login.html
+(function() {
+  if (!localStorage.getItem("currentUser")) {
+    window.location.href = "login.html";
+  }
+})();
 
 // 1) API keys & field definitions
 const apiKeys = {
@@ -283,6 +289,338 @@ document.getElementById("toggle-sidebar-btn").addEventListener("click", () => {
     toggleBtn.textContent = "←";
   }
 });
+// KWh History Modal
+const kwhHistoryModal = document.getElementById("kwh-history-modal");
+const kwhHistoryBtn = document.getElementById("kwh-history-btn");
+const closeKwhHistoryModalBtn = document.querySelectorAll(".close-modal")[1];
+const historyRangeSelect = document.getElementById("history-range");
+const customDateRange = document.getElementById("custom-date-range");
+let kwhHistoryChart = null;
+
+kwhHistoryBtn.addEventListener("click", () => {
+  kwhHistoryModal.style.display = "block";
+  buildKwhHistoryChart(historyRangeSelect.value);
+});
+
+closeKwhHistoryModalBtn.addEventListener("click", () => {
+  kwhHistoryModal.style.display = "none";
+});
+
+window.addEventListener("click", (e) => {
+  if (e.target === kwhHistoryModal) {
+    kwhHistoryModal.style.display = "none";
+  }
+});
+
+historyRangeSelect.addEventListener("change", () => {
+  const range = historyRangeSelect.value;
+  customDateRange.style.display = range === "custom" ? "block" : "none";
+  buildKwhHistoryChart(range);
+});
+
+function buildKwhHistoryChart(range) {
+  const channelMap = { phase1: 2859613, phase2: 2859618, phase3: 2859621 };
+  const channelID = channelMap[currentPhaseKey];
+  let url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=50`;
+
+  if (range === "daily") {
+    const today = new Date();
+    const startDate = new Date(today.setDate(today.getDate() - 1)).toISOString().split('T')[0];
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDate}`;
+  } else if (range === "weekly") {
+    const today = new Date();
+    const startDate = new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDate}`;
+  } else if (range === "monthly") {
+    const today = new Date();
+    const startDate = new Date(today.setMonth(today.getMonth() - 1)).toISOString().split('T')[0];
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDate}`;
+  } else if (range === "custom") {
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDate}&end=${endDate}`;
+  }
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const feeds = data.feeds;
+      const labels = feeds.map(f => new Date(f.created_at).toLocaleString());
+      const dataPoints = feeds.map(f => parseFloat(f.field8) || 0);
+
+      const ctx = document.getElementById("kwh-history-chart").getContext("2d");
+      if (kwhHistoryChart) {
+        kwhHistoryChart.destroy();
+      }
+      kwhHistoryChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Energy (kWh)",
+            data: dataPoints,
+            borderColor: "hsl(200, 70%, 50%)",
+            tension: 0.3,
+            pointRadius: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: "Date" } },
+            y: { title: { display: true, text: "kWh" } }
+          }
+        }
+      });
+    })
+    .catch(err => console.error("Error loading KWh history data:", err));
+}
+
+// Download Report
+// Attach listener (replace old CSV download listener)
+document.getElementById("download-report-btn").addEventListener("click", downloadReportPDF);
+
+async function downloadReportPDF() {
+  const channelMap = { phase1: 2859613, phase2: 2859618, phase3: 2859621 };
+  const channelID = channelMap[currentPhaseKey];
+  const range = historyRangeSelect.value;
+
+  // Build URL based on selected range
+  let url;
+  let startDateStr = null, endDateStr = null;
+  if (range === "daily") {
+    const today = new Date();
+    endDateStr = today.toISOString().split('T')[0];
+    const prev = new Date();
+    prev.setDate(prev.getDate() - 1);
+    startDateStr = prev.toISOString().split('T')[0];
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}`;
+  } else if (range === "weekly") {
+    const today = new Date();
+    endDateStr = today.toISOString().split('T')[0];
+    const prev = new Date();
+    prev.setDate(prev.getDate() - 7);
+    startDateStr = prev.toISOString().split('T')[0];
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}`;
+  } else if (range === "monthly") {
+    const today = new Date();
+    endDateStr = today.toISOString().split('T')[0];
+    const prev = new Date();
+    prev.setMonth(prev.getMonth() - 1);
+    startDateStr = prev.toISOString().split('T')[0];
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}`;
+  } else if (range === "custom") {
+    startDateStr = document.getElementById("start-date").value;
+    endDateStr = document.getElementById("end-date").value;
+    if (!startDateStr || !endDateStr) {
+      alert("Please select both start and end dates for custom range.");
+      return;
+    }
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}&end=${endDateStr}`;
+  } else {
+    // fallback to last 50 readings
+    url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=50`;
+    // startDateStr remains null
+  }
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const feeds = data.feeds;
+    if (!feeds || feeds.length === 0) {
+      alert("No data available for the selected period.");
+      return;
+    }
+    // Sort ascending by timestamp
+    feeds.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    // Extract energy readings (field8) and timestamps
+    const energyValues = feeds.map(f => {
+      const v = parseFloat(f.field8);
+      return isNaN(v) ? 0 : v;
+    });
+    const firstReading = energyValues[0];
+    const lastReading = energyValues[energyValues.length - 1];
+    const usage = lastReading - firstReading;
+
+    const firstTimestamp = new Date(feeds[0].created_at);
+    const lastTimestamp = new Date(feeds[feeds.length - 1].created_at);
+
+    // Prepare labels (formatted timestamps) and dataPoints
+    // For charts, too many labels can clutter; but we'll include them and rotate labels.
+    const labels = feeds.map(f => {
+      // e.g., "6/13/2025 3:04:55 PM"
+      const dt = new Date(f.created_at);
+      return dt.toLocaleString(); 
+    });
+    const dataPoints = energyValues;
+
+    // Create off-screen canvas for line chart
+    const canvas = document.createElement("canvas");
+    // Set a larger width for readability, height moderate
+    // e.g., width 1000px, height 400px. Chart.js will draw onto it.
+    canvas.width = 1000;
+    canvas.height = 400;
+    const ctx = canvas.getContext("2d");
+
+    // Build the Chart.js line chart
+    const lineChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Energy (kWh)",
+          data: dataPoints,
+          fill: false,
+          borderColor: 'rgba(23,195,178,1)',
+          backgroundColor: 'rgba(23,195,178,0.4)',
+          pointRadius: 2,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            display: true,
+            title: { display: true, text: "Date/Time" },
+            ticks: {
+              autoSkip: true,
+              maxRotation: 45,
+              minRotation: 45,
+              maxTicksLimit: 10, // reduce clutter: show up to ~10 labels, Chart.js auto-skips
+            }
+          },
+          y: {
+            display: true,
+            title: { display: true, text: "kWh" },
+            beginAtZero: true
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: getComputedStyle(document.body).getPropertyValue("--text-color") || '#000',
+              font: { size: 12 }
+            }
+          }
+        }
+      }
+    });
+
+    // Wait briefly to ensure rendering completes (Chart.js rendering is synchronous,
+    // but in some environments a tiny delay can help)
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Convert chart canvas to image data URL
+    const imgData = canvas.toDataURL("image/png");
+
+    // Prepare PDF
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("PDF library not loaded. Please ensure jsPDF is included.");
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+    // Using landscape orientation to accommodate wide time-series
+
+    const margin = 15;
+    let cursorY = 15;
+
+    // Title
+    doc.setFontSize(18);
+    doc.text("Smart Energy Analyzer Report", margin, cursorY);
+    cursorY += 10;
+
+    // Phase and Report Date
+    doc.setFontSize(12);
+    doc.text(`Phase: ${apiKeys[currentPhaseKey].title}`, margin, cursorY);
+    cursorY += 7;
+    const reportDateStr = new Date().toLocaleDateString();
+    doc.text(`Report Date: ${reportDateStr}`, margin, cursorY);
+    cursorY += 7;
+    // Period label
+    let periodLabel = "";
+    if (range === "custom" && startDateStr && endDateStr) {
+      periodLabel = `${startDateStr} to ${endDateStr}`;
+    } else if (range === "daily" || range === "weekly" || range === "monthly") {
+      periodLabel = range;
+    } else {
+      periodLabel = `Last ${feeds.length} readings`;
+    }
+    doc.text(`Period: ${periodLabel}`, margin, cursorY);
+    cursorY += 12;
+
+    // Summary “table”
+    const tableX = margin;
+    const tableY = cursorY;
+    const col1Width = 60;
+    const col2Width = 50;
+    const rowHeight = 8;
+    // Header background
+    doc.setFillColor(23, 195, 178);
+    doc.rect(tableX, tableY, col1Width + col2Width, rowHeight, 'F');
+    // Header text in white
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text("Summary", tableX + 2, tableY + 6);
+    doc.text("Value", tableX + col1Width + 2, tableY + 6);
+    // Reset text color to black
+    doc.setTextColor(0, 0, 0);
+
+    // Rows: Previous, Current, Total
+    const rows = [
+      ["Previous Reading", `${firstReading.toFixed(3)} kWh`],
+      ["Current Reading", `${lastReading.toFixed(3)} kWh`],
+      ["Total Consumption", `${usage.toFixed(3)} kWh`]
+    ];
+    let rowY = tableY + rowHeight;
+    rows.forEach(([label, val]) => {
+      // Horizontal line above row
+      doc.setDrawColor(200);
+      doc.line(tableX, rowY, tableX + col1Width + col2Width, rowY);
+      // Text
+      doc.setFontSize(11);
+      doc.text(label, tableX + 2, rowY + 6);
+      doc.text(val, tableX + col1Width + 2, rowY + 6);
+      rowY += rowHeight;
+    });
+    cursorY = rowY + 10;
+
+    // Embed the time-series chart image
+    // Determine available width: page width minus margins
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const availableWidth = pageWidth - 2 * margin;
+    // Image properties
+    const imgProps = doc.getImageProperties(imgData);
+    const imgWidth = availableWidth;
+    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+    // Check if it fits vertically; if too tall, scale down
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const maxHeight = pageHeight - cursorY - margin;
+    let finalImgWidth = imgWidth;
+    let finalImgHeight = imgHeight;
+    if (imgHeight > maxHeight) {
+      finalImgHeight = maxHeight;
+      finalImgWidth = (imgProps.width * finalImgHeight) / imgProps.height;
+    }
+    doc.addImage(imgData, 'PNG', margin, cursorY, finalImgWidth, finalImgHeight);
+
+    // Save PDF
+    const filename = `Energy_Report_${currentPhaseKey}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+
+    // Cleanup Chart.js instance
+    lineChart.destroy();
+    // Off-screen canvas is not attached, so it will be garbage-collected
+
+  } catch (err) {
+    console.error("Error generating PDF report:", err);
+    alert("Failed to generate PDF report.");
+  }
+}
 
 // 11) SET-POINT MODAL + CHART
 const modal = document.getElementById("set-point-modal");
@@ -395,6 +733,24 @@ function colorCards(latestData) {
     }
   });
 }
+// Handle modal close buttons
+document.getElementById("close-kwh-modal").onclick = function () {
+  document.getElementById("kwh-history-modal").style.display = "none";
+};
+document.getElementById("close-setpoint-modal").onclick = function () {
+  document.getElementById("set-point-modal").style.display = "none";
+};
+
+// Optional: Close modal when clicking outside
+window.onclick = function (event) {
+  const kwhModal = document.getElementById("kwh-history-modal");
+  const setPointModal = document.getElementById("set-point-modal");
+  if (event.target === kwhModal) {
+    kwhModal.style.display = "none";
+  } else if (event.target === setPointModal) {
+    setPointModal.style.display = "none";
+  }
+};
 
 // 13) Initial load
 loadPhase("phase1");
