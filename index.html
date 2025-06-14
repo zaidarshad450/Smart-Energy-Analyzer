@@ -3,24 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Enhanced Smart Energy Dashboard</title>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <!-- Your CSS -->
+  <title>Smart Energy Analyzer</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Chart.js for charts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- jsPDF UMD must be loaded before script.js if you use it there -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 <body>
-  <!-- Header -->
   <div class="header">
     <button id="toggle-sidebar-btn">←</button>
     <h1>Smart Energy Analyzer</h1>
   </div>
 
-  <!-- Dashboard -->
   <div class="dashboard">
     <div class="sidebar">
       <h2>Phases</h2>
@@ -94,14 +90,8 @@
         </div>
 
         <div class="setpoint-inputs">
-          <label>
-            Min:
-            <input type="number" id="min-input" step="any" placeholder="e.g. 220" />
-          </label>
-          <label>
-            Max:
-            <input type="number" id="max-input" step="any" placeholder="e.g. 240" />
-          </label>
+          <label>Min: <input type="number" id="min-input" step="any" placeholder="e.g. 220" /></label>
+          <label>Max: <input type="number" id="max-input" step="any" placeholder="e.g. 240" /></label>
         </div>
       </div>
 
@@ -111,7 +101,38 @@
     </div>
   </div>
 
-  <!-- Your main script (script.js) -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCWwMfFXKFCP2e838tprrEqxuIrR-Igf7c",
+      authDomain: "smartenergydashboard-78abc.firebaseapp.com",
+      projectId: "smartenergydashboard-78abc",
+      storageBucket: "smartenergydashboard-78abc.appspot.com",
+      messagingSenderId: "1081856698524",
+      appId: "1:1081856698524:web:a142c5349677b5b42a6559",
+      measurementId: "G-ZF8Q46XP68"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        console.log("User logged in:", user.email);
+      }
+    });
+
+    function logout() {
+      auth.signOut()
+        .then(() => {
+          window.location.href = "login.html";
+        })
+        .catch(err => {
+          alert("Logout failed: " + err.message);
+        });
+    }
+  </script>
   <script src="script.js"></script>
 </body>
 </html>

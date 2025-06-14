@@ -465,3 +465,31 @@ body {
   70% { box-shadow: 0 0 0 10px rgba(67, 97, 238, 0); }
   100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
 }
+/* Prevent layout shift when sidebar toggles */
+.dashboard {
+  display: flex;
+  height: calc(100vh - 50px);
+  overflow: hidden;
+  min-width: 100%;
+  transition: all 0.3s ease;
+}
+
+.sidebar {
+  flex-shrink: 0;
+  width: 200px;
+  transition: transform 0.3s ease, width 0.3s ease, padding 0.3s ease;
+  will-change: transform, width;
+}
+
+.sidebar.hide {
+  transform: translateX(-100%);
+  width: 0 !important;
+  padding: 0 !important;
+}
+
+/* Prevent content from jumping when sidebar toggles */
+.content {
+  flex-grow: 1;
+  min-width: 0;
+  transition: margin-left 0.3s ease;
+}

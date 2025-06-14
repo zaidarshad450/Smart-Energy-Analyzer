@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sign Up - Smart Energy Analyzer</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <!-- Font Awesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
@@ -58,7 +61,7 @@
       gap: 20px;
     }
 
-    form#signup-form input[type="text"],
+    form#signup-form input[type="email"],
     form#signup-form input[type="password"] {
       padding: 14px 18px;
       border-radius: 8px;
@@ -157,7 +160,7 @@
   <div class="auth-container">
     <h2>Join Smart Energy Analyzer</h2>
     <form id="signup-form">
-      <input type="text" id="signup-username" placeholder="Username" required />
+      <input type="email" id="signup-email" placeholder="Email" required />
       <input type="password" id="signup-password" placeholder="Password" required />
       <button type="submit">Register</button>
     </form>
@@ -165,51 +168,92 @@
   </div>
 
   <script>
-    // Redirect logged-in users away from signup page:
-    (function() {
-      const path = location.pathname.split("/").pop();
-      // If currentUser exists, redirect to dashboard (index.html)
-      if (localStorage.getItem("currentUser") && path === "signup.html") {
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCWwMfFXKFCP2e838tprrEqxuIrR-Igf7c",
+      authDomain: "smartenergydashboard-78abc.firebaseapp.com",
+      projectId: "smartenergydashboard-78abc",
+      storageBucket: "smartenergydashboard-78abc.firebasestorage.app",
+      messagingSenderId: "1081856698524",
+      appId: "1:1081856698524:web:a142c5349677b5b42a6559",
+      measurementId: "G-ZF8Q46XP68"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Redirect logged-in users
+    auth.onAuthStateChanged(user => {
+      if (user) {
         window.location.href = "index.html";
       }
-    })();
-
+    });
+// MODIFY THE AUTH STATE LISTENER
+  auth.onAuthStateChanged(user => {
+    // Only redirect if we're not on the login/signup page
+    if (user) {
+      const path = location.pathname;
+      if (!path.includes("login.html") && !path.includes("signup.html")) {
+        window.location.href = "index.html";
+      }
+    }
+  });
+   // Prevent going back to dashboard after logout
+  window.history.pushState(null, null, window.location.href);
+  window.onpopstate = function() {
+    window.history.go(1);
+  };
     // Dark mode toggle
     document.getElementById('dark-mode-toggle').addEventListener('click', function() {
       document.body.classList.toggle('dark-mode');
-      const icon = this.querySelector('i');
+      const btn = document.getElementById('dark-mode-toggle');
       if (document.body.classList.contains('dark-mode')) {
-        icon.className = 'fas fa-sun';
-        this.innerHTML = `<i class="fas fa-sun"></i> Light Mode`;
+        btn.innerHTML = `<i class="fas fa-sun"></i> Light Mode`;
+        localStorage.setItem('darkMode', 'enabled');
       } else {
-        icon.className = 'fas fa-moon';
-        this.innerHTML = `<i class="fas fa-moon"></i> Dark Mode`;
+        btn.innerHTML = `<i class="fas fa-moon"></i> Dark Mode`;
+        localStorage.setItem('darkMode', 'disabled');
       }
     });
+
+    // Check saved dark mode preference
+    if (localStorage.getItem('darkMode') === 'enabled') {
+      document.body.classList.add('dark-mode');
+      document.getElementById('dark-mode-toggle').innerHTML = `<i class="fas fa-sun"></i> Light Mode`;
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
       const signupForm = document.getElementById("signup-form");
       if (signupForm) {
-        signupForm.addEventListener("submit", e => {
+        signupForm.addEventListener("submit", async (e) => {
           e.preventDefault();
-          const username = document.getElementById("signup-username").value.trim();
+          const email = document.getElementById("signup-email").value.trim();
           const password = document.getElementById("signup-password").value.trim();
 
           // Basic validation
-          if (!username || !password) {
-            alert("Please enter both username and password.");
+          if (!email || !password) {
+            alert("Please enter both email and password.");
             return;
           }
-          // Prevent certain characters? (optional)
-          // if (/[^a-zA-Z0-9_-]/.test(username)) { ... }
+          
+          if (password.length < 6) {
+            alert("Password should be at least 6 characters");
+            return;
+          }
 
-          if (localStorage.getItem(`user_${username}`)) {
-            alert("Username already exists!");
-          } else {
-            // Store password in localStorage (plaintext for demo only)
-            localStorage.setItem(`user_${username}`, password);
-            alert("Registered successfully! Please log in.");
-            window.location.href = "login.html";
+          try {
+            // Create user with Firebase
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            alert("Registered successfully! You are now logged in.");
+            // onAuthStateChanged will automatically redirect after successful signup
+          } catch (error) {
+            console.error("Signup error:", error);
+            if (error.code === 'auth/email-already-in-use') {
+              alert("This email is already registered. Please login instead.");
+            } else {
+              alert(`Signup failed: ${error.message}`);
+            }
           }
         });
       }

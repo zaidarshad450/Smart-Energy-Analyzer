@@ -1,25 +1,30 @@
-// Redirect unauthenticated users to login.html
-(function() {
-  if (!localStorage.getItem("currentUser")) {
-    window.location.href = "login.html";
-  }
-})();
-
+const user = firebase.auth().currentUser;
+if (user) {
+  console.log("User email:", user.email);
+  // User is signed in
+}
 // 1) API keys & field definitions
+
 const apiKeys = {
   phase1: {
-    url: "https://api.thingspeak.com/channels/2859613/feeds.json",
+    url: "https://api.thingspeak.com/channels/2859613/feeds.json?results=20",
     title: "Phase 1"
   },
   phase2: {
-    url: "https://api.thingspeak.com/channels/2859618/feeds.json",
+    url: "https://api.thingspeak.com/channels/2859618/feeds.json?results=20",
     title: "Phase 2"
   },
   phase3: {
-    url: "https://api.thingspeak.com/channels/2859621/feeds.json",
+    url: "https://api.thingspeak.com/channels/2859621/feeds.json?results=20",
     title: "Phase 3"
   }
 };
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadPhase("phase 1");
+});
+
 
 const fields = [
   { key: "field1", label: "Voltage", unit: "V" },
@@ -74,8 +79,8 @@ const fieldKeyToName = {
 // 3) Load chosen phase
 function loadPhase(phase) {
   currentPhaseKey = phase;
-  document.getElementById("phase-title").textContent =
-    phase.charAt(0).toUpperCase() + phase.slice(1);
+  document.getElementById("phase-title").textContent = phase.replace(/([a-zA-Z]+)(\d+)/, '$1 $2').replace(/^./, str => str.toUpperCase());
+
   fetchRealtimeValues();
   fetchAllHistorical();
 }
@@ -86,7 +91,10 @@ function fetchRealtimeValues() {
   fetch(`${url}?results=1`)
     .then(res => res.json())
     .then(data => {
-      const latest = data.feeds[0];
+    const latest = data.feeds.reverse().find(entry =>
+  fields.every((f, idx) => entry[`field${idx + 1}`] !== null && entry[`field${idx + 1}`] !== undefined)
+);
+
       veryLatestData = latest;
       const container = document.getElementById("realtime-values");
       container.innerHTML = "";
