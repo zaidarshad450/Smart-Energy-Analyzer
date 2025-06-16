@@ -4,27 +4,24 @@ if (user) {
   // User is signed in
 }
 // 1) API keys & field definitions
-
 const apiKeys = {
   phase1: {
-    url: "https://api.thingspeak.com/channels/2859613/feeds.json?results=20",
+    url: "https://api.thingspeak.com/channels/2859613/feeds.json",
     title: "Phase 1"
   },
   phase2: {
-    url: "https://api.thingspeak.com/channels/2859618/feeds.json?results=20",
+    url: "https://api.thingspeak.com/channels/2859618/feeds.json",
     title: "Phase 2"
   },
   phase3: {
-    url: "https://api.thingspeak.com/channels/2859621/feeds.json?results=20",
+    url: "https://api.thingspeak.com/channels/2859621/feeds.json",
     title: "Phase 3"
   }
 };
 
-
 document.addEventListener("DOMContentLoaded", () => {
-  loadPhase("phase 1");
+  loadPhase("phase1");
 });
-
 
 const fields = [
   { key: "field1", label: "Voltage", unit: "V" },
@@ -91,9 +88,9 @@ function fetchRealtimeValues() {
   fetch(`${url}?results=1`)
     .then(res => res.json())
     .then(data => {
-    const latest = data.feeds.reverse().find(entry =>
-  fields.every((f, idx) => entry[`field${idx + 1}`] !== null && entry[`field${idx + 1}`] !== undefined)
-);
+      const latest = data.feeds.reverse().find(entry =>
+        fields.every((f, idx) => entry[`field${idx + 1}`] !== null && entry[`field${idx + 1}`] !== undefined)
+      );
 
       veryLatestData = latest;
       const container = document.getElementById("realtime-values");
@@ -126,7 +123,7 @@ function fetchRealtimeValues() {
 function fetchAllHistorical() {
   const container = document.getElementById("charts-container");
   container.innerHTML = "";
-  chartInstances.forEach(c => c.destroy());
+  chartInstances.forEach(c => c && c.destroy());
   chartInstances = [];
 
   fields.forEach((f, idx) => {
@@ -134,18 +131,16 @@ function fetchAllHistorical() {
     wrapper.className = "chart-wrapper";
     wrapper.style.animationDelay = `${idx * 0.1}s`;
 
-    // Limit button
     const button = document.createElement("button");
     button.className = "limit-button";
     button.textContent = "📊";
     button.title = "Show history count";
     button.addEventListener("click", () => {
       const inputDiv = wrapper.querySelector(".limit-input-wrapper");
-      inputDiv.style.display = (inputDiv.style.display === "block") ? "none" : "block";
+      inputDiv.style.display = inputDiv.style.display === "block" ? "none" : "block";
     });
     wrapper.appendChild(button);
 
-    // Input area
     const inputDiv = document.createElement("div");
     inputDiv.className = "limit-input-wrapper";
     inputDiv.innerHTML = `
@@ -154,7 +149,6 @@ function fetchAllHistorical() {
     `;
     wrapper.appendChild(inputDiv);
 
-    // Chart canvas
     const canvas = document.createElement("canvas");
     wrapper.appendChild(canvas);
     container.appendChild(wrapper);
@@ -168,6 +162,7 @@ function fetchAllHistorical() {
 function fetchSingleField(fieldKey, chartIndex) {
   const limit = fieldLimits[fieldKey];
   const { url } = apiKeys[currentPhaseKey];
+
   fetch(`${url}?results=${limit}`)
     .then(res => res.json())
     .then(data => {
@@ -175,19 +170,16 @@ function fetchSingleField(fieldKey, chartIndex) {
       const labels = feeds.map(fe => new Date(fe.created_at).toLocaleTimeString());
       const dataPoints = feeds.map(fe => parseFloat(fe[fieldKey]) || 0);
 
-      // Get canvas context
       const ctx = document
         .getElementById("charts-container")
         .children[chartIndex]
         .querySelector("canvas")
         .getContext("2d");
 
-      // Update existing chart or create new
       if (chartInstances[chartIndex]) {
-        const chart = chartInstances[chartIndex];
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = dataPoints;
-        chart.update();
+        chartInstances[chartIndex].data.labels = labels;
+        chartInstances[chartIndex].data.datasets[0].data = dataPoints;
+        chartInstances[chartIndex].update();
       } else {
         const fieldInfo = fields.find(x => x.key === fieldKey);
         const newChart = new Chart(ctx, {
@@ -215,25 +207,13 @@ function fetchSingleField(fieldKey, chartIndex) {
             },
             scales: {
               x: {
-                display: true,
-                title: {
-                  display: true,
-                  text: "Time",
-                  font: { size: 14 }
-                },
+                title: { display: true, text: "Time" },
                 ticks: {
-                  color: getComputedStyle(document.body).getPropertyValue("--text-color"),
-                  maxRotation: 45,
-                  minRotation: 45
+                  color: getComputedStyle(document.body).getPropertyValue("--text-color")
                 }
               },
               y: {
-                display: true,
-                title: {
-                  display: true,
-                  text: fieldInfo.unit,
-                  font: { size: 14 }
-                },
+                title: { display: true, text: fieldInfo.unit },
                 ticks: {
                   color: getComputedStyle(document.body).getPropertyValue("--text-color")
                 }
@@ -255,6 +235,13 @@ function applyLimit(fieldKey, chartIndex) {
     fieldLimits[fieldKey] = val;
     const wrapper = document.getElementById("charts-container").children[chartIndex];
     wrapper.querySelector(".limit-input-wrapper").style.display = "none";
+
+    // Optional: clear old chart
+    if (chartInstances[chartIndex]) {
+      chartInstances[chartIndex].destroy();
+      chartInstances[chartIndex] = null;
+    }
+
     fetchSingleField(fieldKey, chartIndex);
   }
 }
@@ -326,6 +313,33 @@ historyRangeSelect.addEventListener("change", () => {
   buildKwhHistoryChart(range);
 });
 
+// Calculate cumulative energy considering resets
+function calculateCumulativeEnergy(feeds, fieldKey = "field8") {
+  let total = 0;
+  let prev = null;
+
+  for (let i = 0; i < feeds.length; i++) {
+    const current = parseFloat(feeds[i][fieldKey]);
+    if (isNaN(current)) continue;
+
+    if (prev === null) {
+      prev = current;
+      continue;
+    }
+
+    if (current >= prev) {
+      total += current - prev;
+    } else {
+      // Reset detected
+      total += current;
+    }
+
+    prev = current;
+  }
+
+  return total.toFixed(3);
+}
+
 function buildKwhHistoryChart(range) {
   const channelMap = { phase1: 2859613, phase2: 2859618, phase3: 2859621 };
   const channelID = channelMap[currentPhaseKey];
@@ -356,6 +370,9 @@ function buildKwhHistoryChart(range) {
       const labels = feeds.map(f => new Date(f.created_at).toLocaleString());
       const dataPoints = feeds.map(f => parseFloat(f.field8) || 0);
 
+      const totalKWh = calculateCumulativeEnergy(feeds, "field8");
+      document.getElementById("total-kwh-value").textContent = `Total Energy: ${totalKWh} kWh`;
+
       const ctx = document.getElementById("kwh-history-chart").getContext("2d");
       if (kwhHistoryChart) {
         kwhHistoryChart.destroy();
@@ -384,8 +401,6 @@ function buildKwhHistoryChart(range) {
     .catch(err => console.error("Error loading KWh history data:", err));
 }
 
-// Download Report
-// Attach listener (replace old CSV download listener)
 document.getElementById("download-report-btn").addEventListener("click", downloadReportPDF);
 
 async function downloadReportPDF() {
@@ -393,25 +408,23 @@ async function downloadReportPDF() {
   const channelID = channelMap[currentPhaseKey];
   const range = historyRangeSelect.value;
 
-  // Build URL based on selected range
   let url;
   let startDateStr = null, endDateStr = null;
+  const today = new Date();
+
   if (range === "daily") {
-    const today = new Date();
     endDateStr = today.toISOString().split('T')[0];
     const prev = new Date();
     prev.setDate(prev.getDate() - 1);
     startDateStr = prev.toISOString().split('T')[0];
     url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}`;
   } else if (range === "weekly") {
-    const today = new Date();
     endDateStr = today.toISOString().split('T')[0];
     const prev = new Date();
     prev.setDate(prev.getDate() - 7);
     startDateStr = prev.toISOString().split('T')[0];
     url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}`;
   } else if (range === "monthly") {
-    const today = new Date();
     endDateStr = today.toISOString().split('T')[0];
     const prev = new Date();
     prev.setMonth(prev.getMonth() - 1);
@@ -426,9 +439,7 @@ async function downloadReportPDF() {
     }
     url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?start=${startDateStr}&end=${endDateStr}`;
   } else {
-    // fallback to last 50 readings
     url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?results=50`;
-    // startDateStr remains null
   }
 
   try {
@@ -439,49 +450,42 @@ async function downloadReportPDF() {
       alert("No data available for the selected period.");
       return;
     }
-    // Sort ascending by timestamp
+
     feeds.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const energyValues = feeds.map(f => parseFloat(f.field8)).filter(v => !isNaN(v));
 
-    // Extract energy readings (field8) and timestamps
-    const energyValues = feeds.map(f => {
-      const v = parseFloat(f.field8);
-      return isNaN(v) ? 0 : v;
-    });
-    const firstReading = energyValues[0];
-    const lastReading = energyValues[energyValues.length - 1];
-    const usage = lastReading - firstReading;
+    // ✅ Find first non-zero valid reading as previous reading
+    const firstReading = energyValues.find(v => v > 0) || 0;
+    const lastReading = energyValues[energyValues.length - 1] || 0;
 
-    const firstTimestamp = new Date(feeds[0].created_at);
-    const lastTimestamp = new Date(feeds[feeds.length - 1].created_at);
+    // ✅ Calculate cumulative energy considering resets
+    let usage = 0;
+    for (let i = 1; i < energyValues.length; i++) {
+      const prev = energyValues[i - 1];
+      const curr = energyValues[i];
+      const diff = curr - prev;
+      if (!isNaN(diff)) {
+        usage += diff >= 0 ? diff : curr; // reset logic
+      }
+    }
 
-    // Prepare labels (formatted timestamps) and dataPoints
-    // For charts, too many labels can clutter; but we'll include them and rotate labels.
-    const labels = feeds.map(f => {
-      // e.g., "6/13/2025 3:04:55 PM"
-      const dt = new Date(f.created_at);
-      return dt.toLocaleString(); 
-    });
-    const dataPoints = energyValues;
+    const labels = feeds.map(f => new Date(f.created_at).toLocaleString());
+    const dataPoints = feeds.map(f => parseFloat(f.field8) || 0);
 
-    // Create off-screen canvas for line chart
     const canvas = document.createElement("canvas");
-    // Set a larger width for readability, height moderate
-    // e.g., width 1000px, height 400px. Chart.js will draw onto it.
     canvas.width = 1000;
     canvas.height = 400;
     const ctx = canvas.getContext("2d");
 
-    // Build the Chart.js line chart
     const lineChart = new Chart(ctx, {
       type: "line",
       data: {
-        labels: labels,
+        labels,
         datasets: [{
           label: "Energy (kWh)",
           data: dataPoints,
-          fill: false,
           borderColor: 'rgba(23,195,178,1)',
-          backgroundColor: 'rgba(23,195,178,0.4)',
+          backgroundColor: 'rgba(23,195,178,0.3)',
           pointRadius: 2,
           tension: 0.2
         }]
@@ -491,139 +495,97 @@ async function downloadReportPDF() {
         maintainAspectRatio: false,
         scales: {
           x: {
-            display: true,
             title: { display: true, text: "Date/Time" },
             ticks: {
               autoSkip: true,
               maxRotation: 45,
               minRotation: 45,
-              maxTicksLimit: 10, // reduce clutter: show up to ~10 labels, Chart.js auto-skips
+              maxTicksLimit: 10
             }
           },
           y: {
-            display: true,
-            title: { display: true, text: "kWh" },
-            beginAtZero: true
+            beginAtZero: true,
+            title: { display: true, text: "kWh" }
           }
         },
         plugins: {
           legend: {
-            display: true,
             labels: {
-              color: getComputedStyle(document.body).getPropertyValue("--text-color") || '#000',
-              font: { size: 12 }
+              color: getComputedStyle(document.body).getPropertyValue("--text-color") || '#000'
             }
           }
         }
       }
     });
 
-    // Wait briefly to ensure rendering completes (Chart.js rendering is synchronous,
-    // but in some environments a tiny delay can help)
     await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Convert chart canvas to image data URL
     const imgData = canvas.toDataURL("image/png");
 
-    // Prepare PDF
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      alert("PDF library not loaded. Please ensure jsPDF is included.");
-      return;
-    }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
-    // Using landscape orientation to accommodate wide time-series
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
 
+    let y = 15;
     const margin = 15;
-    let cursorY = 15;
 
-    // Title
     doc.setFontSize(18);
-    doc.text("Smart Energy Analyzer Report", margin, cursorY);
-    cursorY += 10;
+    doc.text("Smart Energy Analyzer Report", margin, y);
+    y += 10;
 
-    // Phase and Report Date
     doc.setFontSize(12);
-    doc.text(`Phase: ${apiKeys[currentPhaseKey].title}`, margin, cursorY);
-    cursorY += 7;
-    const reportDateStr = new Date().toLocaleDateString();
-    doc.text(`Report Date: ${reportDateStr}`, margin, cursorY);
-    cursorY += 7;
-    // Period label
-    let periodLabel = "";
-    if (range === "custom" && startDateStr && endDateStr) {
-      periodLabel = `${startDateStr} to ${endDateStr}`;
+    doc.text(`Phase: ${apiKeys[currentPhaseKey].title}`, margin, y);
+    y += 6;
+    doc.text(`Report Date: ${new Date().toLocaleDateString()}`, margin, y);
+    y += 6;
+    let label = "";
+    if (range === "custom") {
+      label = `${startDateStr} to ${endDateStr}`;
     } else if (range === "daily" || range === "weekly" || range === "monthly") {
-      periodLabel = range;
+      label = range;
     } else {
-      periodLabel = `Last ${feeds.length} readings`;
+      label = `Last ${feeds.length} entries`;
     }
-    doc.text(`Period: ${periodLabel}`, margin, cursorY);
-    cursorY += 12;
+    doc.text(`Period: ${label}`, margin, y);
+    y += 10;
 
-    // Summary “table”
-    const tableX = margin;
-    const tableY = cursorY;
-    const col1Width = 60;
-    const col2Width = 50;
-    const rowHeight = 8;
-    // Header background
+    // Table header
     doc.setFillColor(23, 195, 178);
-    doc.rect(tableX, tableY, col1Width + col2Width, rowHeight, 'F');
-    // Header text in white
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.text("Summary", tableX + 2, tableY + 6);
-    doc.text("Value", tableX + col1Width + 2, tableY + 6);
-    // Reset text color to black
+    doc.rect(margin, y, 110, 8, "F");
+    doc.text("Summary", margin + 2, y + 6);
+    doc.text("Value", margin + 60 + 2, y + 6);
+    y += 8;
+
+   const rows = [
+  ["Total Consumption", `${usage.toFixed(3)} kWh`]
+];
+
     doc.setTextColor(0, 0, 0);
-
-    // Rows: Previous, Current, Total
-    const rows = [
-      ["Previous Reading", `${firstReading.toFixed(3)} kWh`],
-      ["Current Reading", `${lastReading.toFixed(3)} kWh`],
-      ["Total Consumption", `${usage.toFixed(3)} kWh`]
-    ];
-    let rowY = tableY + rowHeight;
-    rows.forEach(([label, val]) => {
-      // Horizontal line above row
+    rows.forEach(([label, value]) => {
       doc.setDrawColor(200);
-      doc.line(tableX, rowY, tableX + col1Width + col2Width, rowY);
-      // Text
-      doc.setFontSize(11);
-      doc.text(label, tableX + 2, rowY + 6);
-      doc.text(val, tableX + col1Width + 2, rowY + 6);
-      rowY += rowHeight;
+      doc.line(margin, y, margin + 110, y);
+      doc.text(label, margin + 2, y + 6);
+      doc.text(value, margin + 60 + 2, y + 6);
+      y += 8;
     });
-    cursorY = rowY + 10;
 
-    // Embed the time-series chart image
-    // Determine available width: page width minus margins
+    y += 10;
+
+    // Add graph image
     const pageWidth = doc.internal.pageSize.getWidth();
-    const availableWidth = pageWidth - 2 * margin;
-    // Image properties
-    const imgProps = doc.getImageProperties(imgData);
-    const imgWidth = availableWidth;
-    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-    // Check if it fits vertically; if too tall, scale down
     const pageHeight = doc.internal.pageSize.getHeight();
-    const maxHeight = pageHeight - cursorY - margin;
-    let finalImgWidth = imgWidth;
-    let finalImgHeight = imgHeight;
-    if (imgHeight > maxHeight) {
-      finalImgHeight = maxHeight;
-      finalImgWidth = (imgProps.width * finalImgHeight) / imgProps.height;
-    }
-    doc.addImage(imgData, 'PNG', margin, cursorY, finalImgWidth, finalImgHeight);
+    const imgProps = doc.getImageProperties(imgData);
+    const imgWidth = pageWidth - 2 * margin;
+    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+    const maxHeight = pageHeight - y - margin;
+    const finalImgHeight = Math.min(imgHeight, maxHeight);
+    const finalImgWidth = (imgProps.width * finalImgHeight) / imgProps.height;
 
-    // Save PDF
+    doc.addImage(imgData, "PNG", margin, y, finalImgWidth, finalImgHeight);
+
     const filename = `Energy_Report_${currentPhaseKey}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(filename);
 
-    // Cleanup Chart.js instance
     lineChart.destroy();
-    // Off-screen canvas is not attached, so it will be garbage-collected
-
   } catch (err) {
     console.error("Error generating PDF report:", err);
     alert("Failed to generate PDF report.");

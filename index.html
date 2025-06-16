@@ -39,33 +39,34 @@
   </div>
 
   <!-- KWh History Modal -->
-  <div id="kwh-history-modal" class="modal">
-    <div class="modal-content">
-      <span class="close-modal" id="close-kwh-modal">&times;</span>
-      <h2>KWh History</h2>
-      <div class="modal-body">
-        <label for="history-range">Select Range:</label>
-        <select id="history-range">
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="custom">Custom</option>
-        </select>
-        <div id="custom-date-range" style="display: none;">
-          <label for="start-date">Start Date:</label>
-          <input type="date" id="start-date">
-          <label for="end-date">End Date:</label>
-          <input type="date" id="end-date">
-        </div>
-        <div class="kwh-history-chart-container">
-          <canvas id="kwh-history-chart"></canvas>
-        </div>
+<div id="kwh-history-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" id="close-kwh-modal">&times;</span>
+    <h2>KWh History</h2>
+    <div class="modal-body">
+      <label for="history-range">Select Range:</label>
+      <select id="history-range">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="custom">Custom</option>
+      </select>
+      <div id="custom-date-range" style="display: none;">
+        <label for="start-date">Start Date:</label>
+        <input type="date" id="start-date">
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date">
       </div>
-      <div class="modal-footer">
-        <button id="download-report-btn">Download Report</button>
+      <div class="kwh-history-chart-container">
+        <canvas id="kwh-history-chart"></canvas>
+        <p id="total-kwh-value" style="margin-top: 15px; font-weight: bold;"></p>
       </div>
     </div>
+    <div class="modal-footer">
+      <button id="download-report-btn">Download Report</button>
+    </div>
   </div>
+</div>
 
   <!-- Set-Point Modal -->
   <div id="set-point-modal" class="modal">
